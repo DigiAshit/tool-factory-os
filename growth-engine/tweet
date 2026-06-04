@@ -1,0 +1,63 @@
+---
+# CONTRACT (machine-readable). Body below is the human SOP.
+id: growth-engine/twitter-growth-sop
+version: 2
+owner_role: Twitter Strategist
+trigger:
+  type: scheduled
+  cadence: daily
+inputs:
+  - name: product_state
+    source: _shared scorecard (current product in Scale phase)
+  - name: discovery_log
+    source: opportunity-engine/discovery-log   # verbatim user frustration language
+  - name: launch_assets
+    source: growth-engine/launch-sop outputs (optional, on launch days)
+tools_allowed: [x_api_post, x_api_reply, x_api_dm, posthog_read, link_shortener]
+outputs:
+  - name: thread_draft
+    artifact: artifacts/{product}/x/thread-{date}.md
+  - name: reply_log
+    artifact: artifacts/{product}/x/replies-{date}.jsonl
+guardrails:                       # see _shared/metrics.yaml#platform_guardrails
+  warm_dms_per_day: ref:_shared/metrics.yaml#platform_guardrails.x_warm_dms_per_day
+  reply_cadence: ref:_shared/metrics.yaml#platform_guardrails.reply_cadence_min_minutes_between
+  hitl_gate: true                 # human approval REQUIRED before any post/DM under founder identity
+  pii: scraped engager lists must record source + consent basis
+eval:
+  rubric: _shared/content-eval-rubric.yaml
+  block_publish_below: 0.80
+depends_on: [_shared/metrics.yaml, _shared/content-eval-rubric.yaml, growth-engine/founder-authority-sop]
+done_when:
+  - thread_draft passes eval rubric (>=0.80) AND human-approved
+  - reply_log contains 5 value-first replies within guardrail cadence
+  - any DMs sent <= daily cap; all responses appended for Customer Researcher
+---
+
+# Growth Engine — Twitter (X) Growth SOP
+
+## 1. Trigger
+Run daily by the **Twitter Strategist** to draft and distribute X content. All
+positioning rules are inherited from `founder-authority-sop` (do not restate them
+here). All numeric claims must satisfy `_shared/content-eval-rubric.yaml`.
+
+## 2. X Thread Structure (build-in-public)
+1. **Hook (outcome):** one contrarian or numbers-driven result. The metric must be
+   sourced from the scorecard, not invented.
+2. **Backstory (pain):** the workflow frustration, in the user's own words from the
+   discovery log.
+3. **Steps (system):** 3 concrete steps with a UI clip / diagram each.
+4. **CTA:** one direct link. Founder-pricing offers follow
+   `_shared/metrics.yaml#commitments` (12-month lock, never "forever").
+
+## 3. Daily Engagement
+- Piggyback 5 mid-sized niche accounts (10k–100k). Canonical reply rules and the
+  15-minute placement window live in `distribution-sop` — reference, don't duplicate.
+- Value-first replies only (a lesson or a metric); never "Great thread!"
+- Move highly engaged repliers to DMs using `product-promotion-sop` templates,
+  within the cap at `_shared/metrics.yaml#platform_guardrails.x_warm_dms_per_day`.
+
+## 4. Exit
+Skill is complete only when `done_when` (front-matter) is satisfied. If the eval
+rubric blocks the draft, return `required_edits` and re-run; never auto-publish a
+blocked draft.
