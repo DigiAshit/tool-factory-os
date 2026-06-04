@@ -3,7 +3,7 @@ import re
 import sys
 import yaml
 
-SKILLS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '05-skills'))
+SKILLS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'ai-workforce'))
 
 def validate_skill(file_path):
     print(f"Validating {os.path.relpath(file_path, SKILLS_DIR)}...")
