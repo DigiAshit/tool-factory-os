@@ -1,0 +1,34 @@
+# tool-factory-os / _shared/content-eval-rubric.yaml
+# Shared pre-publish rubric for ALL content-producing skills
+# (linkedin, twitter, launch, distribution, product-promotion).
+# A judge agent scores a draft against this and returns the JSON verdict below.
+# Promotes founder-authority-sop's "Quality Check" into an enforceable gate.
+version: 1
+pass_threshold: 0.80   # weighted score; below this -> block publish, return notes
+
+dimensions:
+  - id: claim_backed
+    weight: 0.25
+    pass: every quantitative claim cites a number from stripe/posthog/discovery log
+    fail_examples: ["growing fast", "huge volume", "thousands of users"]
+  - id: positioning_different
+    weight: 0.20
+    pass: frames product as DIFFERENT for a sub-audience, not "better via feature list"
+  - id: hook_specificity
+    weight: 0.20
+    pass: opening line contains a concrete metric or specific outcome
+  - id: no_banned_phrases
+    weight: 0.15
+    pass: no vague-growth terms; no "locked in forever"; no "lifetime commission"
+  - id: cta_compliance
+    weight: 0.10
+    pass: outbound link is in first comment (LinkedIn/X), not the post body
+  - id: voice_authenticity
+    weight: 0.10
+    pass: uses verbatim frustration language from the discovery log; reads human
+
+judge_output_contract:
+  verdict: pass | block
+  weighted_score: float
+  per_dimension: { id: {score: 0|1|2, note: string} }
+  required_edits: [string]   # populated only when verdict == block

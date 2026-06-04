@@ -1,0 +1,67 @@
+# tool-factory-os / _shared/metrics.yaml
+# Canonical metric + gate definitions. SINGLE SOURCE OF TRUTH.
+# Any SOP that references a metric or a threshold MUST link to a key here
+# instead of restating the value. This file exists to stop definition drift
+# (e.g. the three incompatible "churn" definitions across the old SOPs).
+version: 1
+
+definitions:
+  mrr:
+    name: Monthly Recurring Revenue
+    source: stripe
+    unit: usd_per_month
+  wau:
+    name: Weekly Active Users
+    source: posthog
+    note: ENGAGEMENT metric only. Never use WAU as a churn unit.
+  logo_churn_monthly:
+    name: Monthly logo churn
+    formula: cancelled_subscriptions_in_month / active_subscriptions_at_month_start
+    source: stripe
+    unit: ratio
+  gross_revenue_churn_monthly:
+    name: Monthly gross revenue churn
+    formula: (mrr_lost_to_cancels + mrr_lost_to_downgrades) / mrr_at_month_start
+    source: stripe
+    unit: ratio
+  cac:
+    name: Customer Acquisition Cost
+    formula: channel_spend / new_paying_customers
+    attribution: report first_touch AND last_touch separately
+    rule: never kill a channel on last_touch CAC alone; check assist contribution first
+
+gates:
+  validation_gate:
+    metric: unprompted_leads
+    window_days: 7
+    pass_if: ">= 10"
+    on_fail: archive            # immediate kill
+  month2_skeleton_gate:
+    pass_if: ">= 5 testers each ran core_workflow >= 2 times"
+    on_fail: freeze_features_focus_quality_latency
+  classify_scale:
+    pass_if: "mrr_growth_mom > 0.15 AND gross_revenue_churn_monthly < 0.08"
+  classify_kill:
+    trigger_if: "logo_churn_monthly > 0.12 OR failed(month2_skeleton_gate)"
+    action: sunset_protocol
+
+experiment_standard:               # replaces "declare a winner after 200 visits"
+  unit_of_measure: conversions     # NOT visits
+  target_mde_relative: 0.20        # smallest lift worth detecting
+  significance_alpha: 0.05
+  power: 0.80
+  min_conversions_per_arm: 300     # recompute from baseline CVR + MDE before each test
+  peeking: forbidden               # fixed-horizon or a proper sequential test only
+  tool: posthog_experiments
+
+platform_guardrails:               # hard caps; agents MUST refuse to exceed
+  x_warm_dms_per_day: 15
+  linkedin_warm_dms_per_day: 8     # lowered from 15; LinkedIn restricts earlier
+  linkedin_links_in_post: 0        # links go in first comment
+  reply_cadence_min_minutes_between: 3   # avoid reply-guy throttling patterns
+  scraped_lists: must_record_source_and_consent_basis
+  cold_email: requires unsubscribe + suppression_list (CAN-SPAM / GDPR)
+
+commitments:
+  founder_pricing_lock_months: 12  # NOT "forever"
+  affiliate_commission_max_months: 12  # NOT "lifetime"
